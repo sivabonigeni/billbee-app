@@ -1,11 +1,13 @@
 // ignore_for_file: prefer_const_constructors
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -346,7 +348,7 @@ String buildShareText(DocItem document) {
   return buffer.toString();
 }
 
-Future<File> generatePdfFile(DocItem document, BusinessProfile profile) async {
+Future<Uint8List> generatePdfBytes(DocItem document, BusinessProfile profile) async {
   final pdf = pw.Document();
   final fontData = await rootBundle.load('assets/fonts/NotoSans-Regular.ttf');
   final baseFont = pw.Font.ttf(fontData);
@@ -388,182 +390,165 @@ Future<File> generatePdfFile(DocItem document, BusinessProfile profile) async {
   pdf.addPage(
     pw.MultiPage(
       pageTheme: pw.PageTheme(
-        margin: const pw.EdgeInsets.fromLTRB(32, 28, 32, 28),
+        margin: const pw.EdgeInsets.fromLTRB(40, 40, 40, 40),
         theme: pw.ThemeData.withFont(base: baseFont, bold: baseFont, italic: baseFont, boldItalic: baseFont),
       ),
       build: (_) => [
-        pw.Container(
-          padding: const pw.EdgeInsets.only(bottom: 16),
-          decoration: pw.BoxDecoration(
-            border: pw.Border(bottom: pw.BorderSide(color: primary, width: 2)),
-          ),
-          child: pw.Row(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-            children: [
-              pw.Expanded(
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text(
-                      profile.businessName.isNotEmpty ? profile.businessName : 'BillBee Business',
-                      style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold, color: ink),
-                    ),
-                    pw.SizedBox(height: 6),
-                    if (profile.ownerName.isNotEmpty)
-                      pw.Text(profile.ownerName, style: pw.TextStyle(fontSize: 10, color: muted)),
-                    if (profile.phone.isNotEmpty)
-                      pw.Text(profile.phone, style: pw.TextStyle(fontSize: 10, color: muted)),
-                    if (profile.address.isNotEmpty) pw.SizedBox(height: 6),
-                    if (profile.address.isNotEmpty)
-                      pw.Text(profile.address, style: pw.TextStyle(fontSize: 9.5, color: muted, lineSpacing: 2)),
-                  ],
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  profile.businessName.isNotEmpty ? profile.businessName : 'BillBee Business',
+                  style: pw.TextStyle(fontSize: 28, fontWeight: pw.FontWeight.bold, color: primary),
                 ),
-              ),
-              pw.SizedBox(width: 20),
-              pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.end,
-                children: [
-                  pw.Text(document.type.toUpperCase(), style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: primary, letterSpacing: 1)),
-                  pw.SizedBox(height: 6),
-                  pw.Text(document.id, style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: ink)),
-                ],
-              ),
-            ],
-          ),
+                pw.SizedBox(height: 4),
+                if (profile.ownerName.isNotEmpty)
+                  pw.Text(profile.ownerName, style: pw.TextStyle(fontSize: 12, color: ink)),
+                pw.SizedBox(height: 12),
+              ],
+            ),
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.end,
+              children: [
+                pw.Text(document.type.toUpperCase(), style: pw.TextStyle(fontSize: 32, fontWeight: pw.FontWeight.bold, color: primary)),
+                pw.Transform.translate(offset: const PdfPoint(0, -20), child: pw.Text(document.id, style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: ink))),
+              ],
+            ),
+          ],
         ),
-        pw.SizedBox(height: 20),
+        pw.SizedBox(height: 30),
         pw.Row(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             pw.Expanded(
-              flex: 3,
+              flex: 1,
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.Text('BILL TO', style: pw.TextStyle(fontSize: 9, color: muted, letterSpacing: 1.2)),
+                  pw.Text('DETAILS', style: pw.TextStyle(fontSize: 10, color: muted, fontWeight: pw.FontWeight.bold)),
                   pw.SizedBox(height: 8),
-                  pw.Text(document.customer.name, style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: ink)),
-                  pw.SizedBox(height: 4),
-                  pw.Text(document.customer.phone, style: pw.TextStyle(fontSize: 10, color: muted)),
-                  pw.Text(document.customer.businessType, style: pw.TextStyle(fontSize: 10, color: muted)),
+                  if (profile.phone.isNotEmpty) metaChip('Phone', profile.phone),
+                  if (profile.address.isNotEmpty) metaChip('Address', profile.address),
+                  if (profile.gstin.isNotEmpty) metaChip('GSTIN', profile.gstin),
+                  if (profile.upiId.isNotEmpty) metaChip('UPI ID', profile.upiId),
                 ],
               ),
             ),
-            pw.SizedBox(width: 20),
+            pw.SizedBox(width: 40),
             pw.Expanded(
-              flex: 2,
+              flex: 1,
               child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  metaChip('Status', document.status),
-                  metaChip('Date', '${document.date.toLocal()}'.split('.').first),
-                  if (profile.gstin.isNotEmpty) metaChip('GSTIN', profile.gstin),
-                  if (profile.upiId.isNotEmpty) metaChip('UPI', profile.upiId),
+                  pw.Text('BILL TO', style: pw.TextStyle(fontSize: 10, color: muted, fontWeight: pw.FontWeight.bold)),
+                  pw.SizedBox(height: 8),
+                  pw.Text(document.customer.name, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: ink)),
+                  pw.SizedBox(height: 4),
+                  pw.Text(document.customer.phone, style: pw.TextStyle(fontSize: 11, color: ink)),
+                  pw.Text(document.customer.businessType, style: pw.TextStyle(fontSize: 11, color: muted)),
+                  pw.SizedBox(height: 12),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: pw.BoxDecoration(color: soft, borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6))),
+                    child: pw.Text(document.status, style: pw.TextStyle(fontSize: 10, color: primary, fontWeight: pw.FontWeight.bold)),
+                  ),
                 ],
               ),
             ),
           ],
         ),
-        pw.SizedBox(height: 24),
+        pw.SizedBox(height: 40),
         pw.Table(
           border: pw.TableBorder(
-            horizontalInside: pw.BorderSide(color: border, width: 0.6),
-            bottom: pw.BorderSide(color: border, width: 0.8),
-            top: pw.BorderSide(color: border, width: 0.8),
+            horizontalInside: pw.BorderSide(color: border, width: 0.5),
+            bottom: pw.BorderSide(color: ink, width: 1),
           ),
           columnWidths: {
-            0: const pw.FlexColumnWidth(4.5),
+            0: const pw.FlexColumnWidth(5),
             1: const pw.FlexColumnWidth(1),
-            2: const pw.FlexColumnWidth(1.8),
+            2: const pw.FlexColumnWidth(2),
             3: const pw.FlexColumnWidth(2),
           },
           children: [
             pw.TableRow(
-              decoration: pw.BoxDecoration(color: soft),
-              children: ['Description', 'Qty', 'Rate', 'Amount']
+              decoration: pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide(color: ink, width: 1.5))),
+              children: ['Description', 'Qty', 'Price', 'Total']
                   .map((h) => pw.Padding(
-                        padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                        child: pw.Text(h, style: pw.TextStyle(fontSize: 9.5, color: ink, fontWeight: pw.FontWeight.bold)),
+                        padding: const pw.EdgeInsets.symmetric(vertical: 10),
+                        child: pw.Text(h, style: pw.TextStyle(fontSize: 10, color: ink, fontWeight: pw.FontWeight.bold)),
                       ))
                   .toList(),
             ),
             ...document.items.map((item) => pw.TableRow(
                   children: [
-                    pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 12), child: pw.Text(item.name, style: pw.TextStyle(fontSize: 10, color: ink))),
-                    pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 12), child: pw.Text('${item.quantity}', style: pw.TextStyle(fontSize: 10, color: ink))),
-                    pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 12), child: pw.Text(money(item.price), style: pw.TextStyle(fontSize: 10, color: ink))),
-                    pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 12), child: pw.Text(money(item.total), style: pw.TextStyle(fontSize: 10, color: ink))),
+                    pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 12), child: pw.Text(item.name, style: pw.TextStyle(fontSize: 11, color: ink))),
+                    pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 12), child: pw.Text('${item.quantity}', style: pw.TextStyle(fontSize: 11, color: ink))),
+                    pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 12), child: pw.Text(money(item.price), style: pw.TextStyle(fontSize: 11, color: ink))),
+                    pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 12), child: pw.Text(money(item.total), style: pw.TextStyle(fontSize: 11, color: ink, fontWeight: pw.FontWeight.bold))),
                   ],
                 )),
           ],
         ),
-        pw.SizedBox(height: 22),
+        pw.SizedBox(height: 30),
         pw.Row(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             pw.Expanded(
+              flex: 2,
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.Text('Notes', style: pw.TextStyle(fontSize: 9, color: muted, letterSpacing: 1.1)),
+                  pw.Text('PAYMENT INFO', style: pw.TextStyle(fontSize: 9, color: muted, fontWeight: pw.FontWeight.bold, letterSpacing: 1)),
                   pw.SizedBox(height: 8),
-                  pw.Container(
-                    width: double.infinity,
-                    padding: const pw.EdgeInsets.all(14),
-                    decoration: pw.BoxDecoration(
-                      color: soft,
-                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
-                    ),
-                    child: pw.Text(
-                      profile.paymentInstructions.isNotEmpty
-                          ? profile.paymentInstructions
-                          : (profile.upiId.isNotEmpty
-                              ? 'Please make payment via UPI: ${profile.upiId}. Thank you for your business.'
-                              : 'Thank you for your business. Please retain this document for your records.'),
-                      style: pw.TextStyle(fontSize: 9.5, color: muted, lineSpacing: 2),
-                    ),
+                  pw.Text(
+                    profile.paymentInstructions.isNotEmpty
+                        ? profile.paymentInstructions
+                        : (profile.upiId.isNotEmpty ? 'UPI: ${profile.upiId}' : 'Thank you for your business.'),
+                    style: pw.TextStyle(fontSize: 10, color: ink, lineSpacing: 1.5),
                   ),
                 ],
               ),
             ),
-            pw.SizedBox(width: 20),
-            pw.Container(
-              width: 230,
-              padding: const pw.EdgeInsets.all(16),
-              decoration: pw.BoxDecoration(
-                border: pw.Border.all(color: border),
-                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)),
-              ),
+            pw.SizedBox(width: 40),
+            pw.Expanded(
+              flex: 1,
               child: pw.Column(
                 children: [
                   totalRow('Subtotal', money(document.subtotal)),
-                  totalRow(document.taxEnabled ? 'GST (${document.taxPercent.toStringAsFixed(1)}%)' : 'GST', document.taxEnabled ? money(document.gst) : 'Disabled'),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 8),
-                    child: pw.Divider(color: border),
-                  ),
-                  totalRow('Grand Total', money(document.total), grand: true),
+                  if (document.taxEnabled) totalRow('GST (${document.taxPercent.toStringAsFixed(1)}%)', money(document.gst)),
+                  pw.Divider(color: border, thickness: 0.5),
+                  pw.SizedBox(height: 4),
+                  totalRow('Total Amount', money(document.total), grand: true),
                 ],
               ),
             ),
           ],
         ),
-        pw.SizedBox(height: 28),
+        pw.SizedBox(height: 50),
+        pw.Divider(color: border, thickness: 0.5),
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            pw.Text(profile.footerNote.isNotEmpty ? profile.footerNote : 'Generated by BillBee', style: pw.TextStyle(fontSize: 9, color: muted)),
-            pw.Text('${document.type} • ${document.id}', style: pw.TextStyle(fontSize: 9, color: muted)),
+            pw.Text(profile.footerNote.isNotEmpty ? profile.footerNote : 'Thank you for choosing ${profile.businessName}!', style: pw.TextStyle(fontSize: 9, color: muted)),
+            pw.Text('Page 1 of 1', style: pw.TextStyle(fontSize: 9, color: muted)),
           ],
         ),
       ],
     ),
   );
 
+  return pdf.save();
+}
+
+Future<File> generatePdfFile(DocItem document, BusinessProfile profile) async {
+  final bytes = await generatePdfBytes(document, profile);
   final dir = await getTemporaryDirectory();
   final safeId = document.id.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
   final file = File('${dir.path}/$safeId.pdf');
-  await file.writeAsBytes(await pdf.save());
+  await file.writeAsBytes(bytes);
   return file;
 }
 
@@ -887,7 +872,19 @@ class _DocumentsTab extends StatelessWidget {
       children: [
         const Text('Documents', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
         const SizedBox(height: 12),
-        ...documents.map((doc) => _DocumentCard(document: doc, onOpen: () => onOpenDetail(doc), onShare: () async { final file = await generatePdfFile(doc, businessProfile); await Share.shareXFiles([XFile(file.path)], text: '${doc.type} ${doc.id}', subject: '${doc.type} ${doc.id}'); }, onConvertEstimate: doc.type == 'Estimate' ? () => onConvertEstimate(doc) : null, onStatusChange: (status) => onStatusChange(doc, status))),
+        ...documents.map((doc) => _DocumentCard(
+          document: doc,
+          onOpen: () => onOpenDetail(doc),
+          onPdfPreview: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => PdfViewerPage(document: doc, profile: businessProfile)));
+          },
+          onShare: () async {
+            final bytes = await generatePdfBytes(doc, businessProfile);
+            await Printing.sharePdf(bytes: bytes, filename: '${doc.id}.pdf');
+          },
+          onConvertEstimate: doc.type == 'Estimate' ? () => onConvertEstimate(doc) : null,
+          onStatusChange: (status) => onStatusChange(doc, status),
+        )),
       ],
     );
   }
@@ -987,46 +984,131 @@ class _SettingsTabState extends State<_SettingsTab> {
 
   @override
   Widget build(BuildContext context) {
+    final profile = widget.profile;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         const Text('Settings', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 12),
-        _SectionCard(
-          title: 'Business profile',
-          child: Column(
-            children: [
-              TextField(controller: _businessNameController, decoration: const InputDecoration(labelText: 'Business name', border: OutlineInputBorder())),
-              const SizedBox(height: 12),
-              TextField(controller: _ownerNameController, decoration: const InputDecoration(labelText: 'Owner name', border: OutlineInputBorder())),
-              const SizedBox(height: 12),
-              TextField(controller: _phoneController, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone', border: OutlineInputBorder())),
-              const SizedBox(height: 12),
-              TextField(controller: _gstinController, decoration: const InputDecoration(labelText: 'GSTIN', border: OutlineInputBorder())),
-              const SizedBox(height: 12),
-              TextField(controller: _upiController, decoration: const InputDecoration(labelText: 'UPI ID', border: OutlineInputBorder())),
-              const SizedBox(height: 12),
-              TextField(controller: _addressController, maxLines: 3, decoration: const InputDecoration(labelText: 'Address', border: OutlineInputBorder())),
-              const SizedBox(height: 12),
-              TextField(controller: _paymentInstructionsController, maxLines: 2, decoration: const InputDecoration(labelText: 'Payment instructions', border: OutlineInputBorder())),
-              const SizedBox(height: 12),
-              TextField(controller: _footerNoteController, maxLines: 2, decoration: const InputDecoration(labelText: 'Footer note', border: OutlineInputBorder())),
-              const SizedBox(height: 12),
-              TextField(controller: _brandColorController, decoration: const InputDecoration(labelText: 'Brand color hex', hintText: '#1E3A8A', border: OutlineInputBorder())),
-            ],
-          ),
-        ),
         const SizedBox(height: 16),
-        FilledButton.icon(
-          onPressed: _save,
-          icon: const Icon(Icons.save_outlined),
-          label: const Text('Save settings'),
+        Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: const BorderSide(color: Colors.black12),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                CircleAvatar(
+                  radius: 40,
+                  backgroundColor: Color(int.parse(profile.brandColorHex.replaceFirst('#', '0xFF'))).withOpacity(0.1),
+                  child: Text(
+                    (profile.businessName.isNotEmpty ? profile.businessName : 'B').substring(0, 1).toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                      color: Color(int.parse(profile.brandColorHex.replaceFirst('#', '0xFF'))),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  profile.businessName.isNotEmpty ? profile.businessName : 'Set Business Name',
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                ),
+                if (profile.ownerName.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(profile.ownerName, style: const TextStyle(color: Colors.black54, fontSize: 16)),
+                ],
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 16),
+                _ProfileInfoTile(icon: Icons.phone_outlined, label: 'Phone', value: profile.phone.isNotEmpty ? profile.phone : 'Not set'),
+                _ProfileInfoTile(icon: Icons.branding_watermark_outlined, label: 'GSTIN', value: profile.gstin.isNotEmpty ? profile.gstin : 'Not set'),
+                _ProfileInfoTile(icon: Icons.account_balance_wallet_outlined, label: 'UPI ID', value: profile.upiId.isNotEmpty ? profile.upiId : 'Not set'),
+                _ProfileInfoTile(icon: Icons.location_on_outlined, label: 'Address', value: profile.address.isNotEmpty ? profile.address : 'Not set'),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _showEditSheet,
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Edit Business Info'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ],
     );
   }
 
+  void _showEditSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 24, right: 24, top: 24),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Edit Business', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+                  IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+                ],
+              ),
+              const SizedBox(height: 20),
+              TextField(controller: _businessNameController, decoration: const InputDecoration(labelText: 'Business Name', border: OutlineInputBorder())),
+              const SizedBox(height: 16),
+              TextField(controller: _ownerNameController, decoration: const InputDecoration(labelText: 'Owner Name', border: OutlineInputBorder())),
+              const SizedBox(height: 16),
+              TextField(controller: _phoneController, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone', border: OutlineInputBorder())),
+              const SizedBox(height: 16),
+              TextField(controller: _gstinController, decoration: const InputDecoration(labelText: 'GSTIN', border: OutlineInputBorder())),
+              const SizedBox(height: 16),
+              TextField(controller: _upiController, decoration: const InputDecoration(labelText: 'UPI ID', border: OutlineInputBorder())),
+              const SizedBox(height: 16),
+              TextField(controller: _addressController, maxLines: 3, decoration: const InputDecoration(labelText: 'Address', border: OutlineInputBorder())),
+              const SizedBox(height: 16),
+              TextField(controller: _paymentInstructionsController, maxLines: 2, decoration: const InputDecoration(labelText: 'Payment Instructions', border: OutlineInputBorder())),
+              const SizedBox(height: 16),
+              TextField(controller: _footerNoteController, maxLines: 2, decoration: const InputDecoration(labelText: 'Footer Note', border: OutlineInputBorder())),
+              const SizedBox(height: 16),
+              TextField(controller: _brandColorController, decoration: const InputDecoration(labelText: 'Brand Color Hex', hintText: '#1A73E8', border: OutlineInputBorder())),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () {
+                    _save();
+                    Navigator.pop(context);
+                  },
+                  style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                  child: const Text('Save Changes'),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _save() {
+    final hex = _brandColorController.text.trim();
+    final validHex = RegExp(r'^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$').hasMatch(hex) ? hex : '#1A73E8';
     widget.onSave(
       BusinessProfile(
         businessName: _businessNameController.text.trim(),
@@ -1037,10 +1119,37 @@ class _SettingsTabState extends State<_SettingsTab> {
         address: _addressController.text.trim(),
         paymentInstructions: _paymentInstructionsController.text.trim(),
         footerNote: _footerNoteController.text.trim(),
-        brandColorHex: _brandColorController.text.trim().isEmpty ? '#1E3A8A' : _brandColorController.text.trim(),
+        brandColorHex: validHex,
       ),
     );
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Settings saved')));
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Settings updated')));
+  }
+}
+
+class _ProfileInfoTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  const _ProfileInfoTile({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: Colors.black45),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: const TextStyle(fontSize: 12, color: Colors.black45)),
+              Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -1420,7 +1529,17 @@ class _DocumentDetailPageState extends State<DocumentDetailPage> {
                 label: const Text('Edit document'),
               ),
               FilledButton.tonalIcon(
-                onPressed: () async { final file = await generatePdfFile(currentDoc, widget.args.businessProfile); await Share.shareXFiles([XFile(file.path)], text: '${currentDoc.type} ${currentDoc.id}', subject: '${currentDoc.type} ${currentDoc.id}'); },
+                onPressed: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => PdfViewerPage(document: currentDoc, profile: widget.args.businessProfile)));
+                },
+                icon: const Icon(Icons.picture_as_pdf_outlined),
+                label: const Text('Preview PDF'),
+              ),
+              FilledButton.tonalIcon(
+                onPressed: () async {
+                  final bytes = await generatePdfBytes(currentDoc, widget.args.businessProfile);
+                  await Printing.sharePdf(bytes: bytes, filename: '${currentDoc.id}.pdf');
+                },
                 icon: const Icon(Icons.share_outlined),
                 label: const Text('Share now'),
               ),
@@ -1432,6 +1551,25 @@ class _DocumentDetailPageState extends State<DocumentDetailPage> {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class PdfViewerPage extends StatelessWidget {
+  final DocItem document;
+  final BusinessProfile profile;
+  const PdfViewerPage({super.key, required this.document, required this.profile});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(document.id)),
+      body: PdfPreview(
+        build: (format) => generatePdfBytes(document, profile),
+        canChangePageFormat: false,
+        canChangeOrientation: false,
+        canDebug: false,
       ),
     );
   }
@@ -1487,7 +1625,8 @@ class _DocumentCard extends StatelessWidget {
   final ValueChanged<String>? onStatusChange;
   final VoidCallback? onOpen;
   final VoidCallback? onShare;
-  const _DocumentCard({required this.document, this.onConvertEstimate, this.onStatusChange, this.onOpen, this.onShare});
+  final VoidCallback? onPdfPreview;
+  const _DocumentCard({required this.document, this.onConvertEstimate, this.onStatusChange, this.onOpen, this.onShare, this.onPdfPreview});
 
   @override
   Widget build(BuildContext context) {
@@ -1513,8 +1652,16 @@ class _DocumentCard extends StatelessWidget {
             Text('₹${document.total.toStringAsFixed(0)}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
             const SizedBox(height: 10),
             Wrap(spacing: 8, runSpacing: 8, children: [
-              OutlinedButton.icon(onPressed: () {}, icon: const Icon(Icons.picture_as_pdf_outlined), label: const Text('PDF')),
-              FilledButton.icon(onPressed: onShare, icon: const Icon(Icons.share), label: const Text('Share')),
+              OutlinedButton.icon(
+                onPressed: onPdfPreview,
+                icon: const Icon(Icons.picture_as_pdf_outlined),
+                label: const Text('PDF'),
+              ),
+              FilledButton.icon(
+                onPressed: onShare,
+                icon: const Icon(Icons.share_outlined),
+                label: const Text('Share'),
+              ),
               if (onConvertEstimate != null) FilledButton.tonalIcon(onPressed: onConvertEstimate, icon: const Icon(Icons.swap_horiz), label: const Text('To Invoice')),
               if (onStatusChange != null && document.type == 'Invoice')
                 PopupMenuButton<String>(
