@@ -1,0 +1,13 @@
+Analyzing billbee-app...                                        
+
+   info • The imported package 'google_fonts' isn't a dependency of the importing package • lib/main.dart:2:8 • depend_on_referenced_packages
+  error • Target of URI doesn't exist: 'package:google_fonts/google_fonts.dart' • lib/main.dart:2:8 • uri_does_not_exist
+  error • Undefined name 'GoogleFonts' • lib/main.dart:21:20 • undefined_identifier
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/screens/create_document_page.dart:64:15 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/screens/document_detail_page.dart:71:17 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/tabs/settings_tab.dart:73:102 • deprecated_member_use
+  error • The constructor being called isn't a const constructor • lib/screens/tabs/settings_tab.dart:124:57 • const_with_non_const
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/action_widgets.dart:42:52 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/widgets/document_card.dart:42:62 • deprecated_member_use
+
+9 issues found. (ran in 3.5s)
