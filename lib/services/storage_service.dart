@@ -18,9 +18,12 @@ class BillBeeStore {
     final documentRaw = prefs.getString(_documentsKey);
 
     if (customerRaw == null || documentRaw == null) {
-      final seed = _seedData();
-      await save(seed.customers, seed.documents, seed.estimateCounter, seed.invoiceCounter);
-      return seed;
+      return BillBeeSeedData(
+        customers: [],
+        documents: [],
+        estimateCounter: 1001,
+        invoiceCounter: 2001,
+      );
     }
 
     final customers = (jsonDecode(customerRaw) as List)
@@ -63,43 +66,7 @@ class BillBeeStore {
     await prefs.setString(_businessProfileKey, jsonEncode(profile.toJson()));
   }
 
-  static BillBeeSeedData _seedData() {
-    final customers = [
-      const Customer(name: 'Ravi Electricals', phone: '+91 98765 43210', businessType: 'Service'),
-      const Customer(name: 'Ananya Design Studio', phone: '+91 91234 56789', businessType: 'Freelancer'),
-      const Customer(name: 'Sri Sai Traders', phone: '+91 99887 76655', businessType: 'Retail'),
-    ];
-    final documents = [
-      DocItem(
-        id: 'EST-1001',
-        type: 'Estimate',
-        customer: customers[0],
-        status: 'Pending',
-        date: DateTime.now().subtract(const Duration(days: 1)),
-        items: const [
-          LineItem(name: 'Electrical Repair Visit', quantity: 1, price: 1200),
-          LineItem(name: 'Wiring Material', quantity: 2, price: 350),
-        ],
-      ),
-      DocItem(
-        id: 'INV-2034',
-        type: 'Invoice',
-        customer: customers[1],
-        status: 'Paid',
-        date: DateTime.now().subtract(const Duration(days: 2)),
-        items: const [
-          LineItem(name: 'Logo Design', quantity: 1, price: 5000),
-          LineItem(name: 'Social Media Banner Pack', quantity: 1, price: 2500),
-        ],
-      ),
-    ];
-    return BillBeeSeedData(
-      customers: customers,
-      documents: documents,
-      estimateCounter: 1002,
-      invoiceCounter: 2036,
-    );
-  }
+
 }
 
 class BillBeeSeedData {

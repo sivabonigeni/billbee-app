@@ -2,6 +2,7 @@ class BusinessProfile {
   final String businessName;
   final String ownerName;
   final String phone;
+  final String email;
   final String gstin;
   final String upiId;
   final String address;
@@ -13,6 +14,7 @@ class BusinessProfile {
     this.businessName = '',
     this.ownerName = '',
     this.phone = '',
+    this.email = '',
     this.gstin = '',
     this.upiId = '',
     this.address = '',
@@ -25,6 +27,7 @@ class BusinessProfile {
     String? businessName,
     String? ownerName,
     String? phone,
+    String? email,
     String? gstin,
     String? upiId,
     String? address,
@@ -35,6 +38,7 @@ class BusinessProfile {
         businessName: businessName ?? this.businessName,
         ownerName: ownerName ?? this.ownerName,
         phone: phone ?? this.phone,
+        email: email ?? this.email,
         gstin: gstin ?? this.gstin,
         upiId: upiId ?? this.upiId,
         address: address ?? this.address,
@@ -47,6 +51,7 @@ class BusinessProfile {
         'businessName': businessName,
         'ownerName': ownerName,
         'phone': phone,
+        'email': email,
         'gstin': gstin,
         'upiId': upiId,
         'address': address,
@@ -59,6 +64,7 @@ class BusinessProfile {
         businessName: json['businessName'] ?? '',
         ownerName: json['ownerName'] ?? '',
         phone: json['phone'] ?? '',
+        email: json['email'] ?? '',
         gstin: json['gstin'] ?? '',
         upiId: json['upiId'] ?? '',
         address: json['address'] ?? '',

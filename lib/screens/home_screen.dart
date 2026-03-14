@@ -66,6 +66,7 @@ class _BillBeeHomeState extends State<BillBeeHome> {
         onConvertEstimate: _convertEstimateToInvoice,
         onStatusChange: _changeStatus,
         onOpenDetail: _openDetail,
+        onCreateNew: _showCreateSheet,
       ),
       CustomersTab(customers: _customers, onAddCustomer: _openAddCustomer, onEditCustomer: _openEditCustomer),
       SettingsTab(profile: _businessProfile, onSave: _saveBusinessProfile),
@@ -173,6 +174,12 @@ class _BillBeeHomeState extends State<BillBeeHome> {
 
     if (created != null) {
       setState(() {
+        // Ensure new customer is added to the list if created inline
+        final exists = _customers.any((c) => c.phone == created.customer.phone);
+        if (!exists) {
+          _customers.insert(0, created.customer);
+        }
+        
         _documents.insert(0, created);
         if (type == 'Estimate') {
           _estimateCounter++;

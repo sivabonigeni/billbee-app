@@ -31,51 +31,59 @@ class _CreateCustomerPageState extends State<CreateCustomerPage> {
     super.dispose();
   }
 
+  final _formKey = GlobalKey<FormState>();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(widget.customer == null ? 'Add Customer' : 'Edit Customer')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          SectionCard(
-            title: 'Customer details',
-            child: Column(
-              children: [
-                TextField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(labelText: 'Customer name', border: OutlineInputBorder()),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _phoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(labelText: 'Phone number', border: OutlineInputBorder()),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _typeController,
-                  decoration: const InputDecoration(labelText: 'Business type', border: OutlineInputBorder()),
-                ),
-              ],
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            SectionCard(
+              title: 'Customer details',
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(labelText: 'Customer name', border: OutlineInputBorder()),
+                    validator: (val) => val == null || val.trim().isEmpty ? 'Enter name' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(labelText: 'Phone number', border: OutlineInputBorder()),
+                    validator: (val) => val == null || val.trim().isEmpty ? 'Enter phone' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _typeController,
+                    decoration: const InputDecoration(labelText: 'Business type', border: OutlineInputBorder()),
+                    validator: (val) => val == null || val.trim().isEmpty ? 'Enter type' : null,
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: _save,
-            icon: const Icon(Icons.save_outlined),
-            label: Text(widget.customer == null ? 'Save customer' : 'Update customer'),
-          ),
-        ],
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: _save,
+              icon: const Icon(Icons.save_outlined),
+              label: Text(widget.customer == null ? 'Save customer' : 'Update customer'),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   void _save() {
+    if (!_formKey.currentState!.validate()) return;
     final name = _nameController.text.trim();
     final phone = _phoneController.text.trim();
     final type = _typeController.text.trim();
-    if (name.isEmpty || phone.isEmpty || type.isEmpty) return;
     Navigator.pop(context, Customer(name: name, phone: phone, businessType: type));
   }
 }
